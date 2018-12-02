@@ -1,4 +1,146 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.5">Jekyll</generator><link href="https://sepheus.github.com/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="https://sepheus.github.com/blog/" rel="alternate" type="text/html" /><updated>2018-12-02T15:20:19+00:00</updated><id>https://sepheus.github.com/blog/feed.xml</id><title type="html">Emergent Laeca</title><subtitle>I'm Seph, this is my blog of things that interest me!</subtitle><entry><title type="html">Ruby and D Interop with Ruby FFI</title><link href="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-ffi.html" rel="alternate" type="text/html" title="Ruby and D Interop with Ruby FFI" /><published>2018-12-02T10:55:34+00:00</published><updated>2018-12-02T10:55:34+00:00</updated><id>https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-ffi</id><content type="html" xml:base="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-ffi.html">&lt;p&gt;I am a big fan of Ruby and I am also a big fan of the less well known &lt;a href=&quot;https://dlang.org/&quot;&gt;D programming language&lt;/a&gt;.  Lately I had been wondering how hard it would be to get them both to work together.  As we will find out - it is not actually all that hard to accomplish!&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.5">Jekyll</generator><link href="https://sepheus.github.com/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="https://sepheus.github.com/blog/" rel="alternate" type="text/html" /><updated>2018-12-02T18:05:18+00:00</updated><id>https://sepheus.github.com/blog/feed.xml</id><title type="html">Emergent Laeca</title><subtitle>I'm Seph, this is my blog of things that interest me!</subtitle><entry><title type="html">Ruby and D Interop: Part 2</title><link href="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html" rel="alternate" type="text/html" title="Ruby and D Interop: Part 2" /><published>2018-12-02T15:47:12+00:00</published><updated>2018-12-02T15:47:12+00:00</updated><id>https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2</id><content type="html" xml:base="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html">&lt;p&gt;Whilst I was experimenting with D and RubyFFI I had wondered if there was an easier way… writing out the bindings was becoming quite cumbersome.  So I of course turned to the introspective features of &lt;a href=&quot;https://dlang.org/&quot;&gt;D&lt;/a&gt;, not unfamiliar to those well versed in Ruby’s metaprogramming trickery.&lt;/p&gt;
+
+&lt;p&gt;D does not have particularly strong runtime reflection capabilities but you can determine a lot of what you need at compile time.&lt;/p&gt;
+
+&lt;p&gt;In this post I will walk you through my &lt;a href=&quot;https://github.com/sepheus/d-ruby-ffi&quot;&gt;D Ruby FFI Project&lt;/a&gt;.  This project aims to grease the wheels of writing native code in D for use in Ruby by automagically generating bindings for you on demand as well as providing some other useful things.&lt;/p&gt;
+
+&lt;p&gt;If you have not read the previous post in this series you can &lt;a href=&quot;/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1.html&quot;&gt;catch up here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;using-the-rubyffi-mixin&quot;&gt;Using the rubyffi mixin&lt;/h3&gt;
+&lt;p&gt;For the sake of simple examples compilation instructions assume you have copied rubyffi.d from the repository to the same location as the file you’re compiling.&lt;/p&gt;
+
+&lt;p&gt;Let’s take my previous example&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-d&quot; data-lang=&quot;d&quot;&gt;&lt;span class=&quot;c1&quot;&gt;//fizz.d
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stdio&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;writeln&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;conv&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;to&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extern&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fizzBuzz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;auto&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;FizzBuzz&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Buzz&quot;&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Fizz&quot;&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+                    &lt;span class=&quot;s&quot;&gt;&quot;Boring&quot;&lt;/span&gt;   &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;//The below line performs a memory allocation.
+&lt;/span&gt;    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;string&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;~&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot; is &quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;~&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;writeln&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;With the rubyffi mixin this becomes&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-d&quot; data-lang=&quot;d&quot;&gt;&lt;span class=&quot;c1&quot;&gt;//fizz.d
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rubyffi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stdio&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;writeln&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;conv&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;to&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;mixin&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rubyffi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;__MODULE__&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extern&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nd&quot;&gt;@Ruby&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fizzBuzz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;auto&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;FizzBuzz&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Buzz&quot;&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;num&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Fizz&quot;&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+                        &lt;span class=&quot;s&quot;&gt;&quot;Boring&quot;&lt;/span&gt;   &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;//The below line performs a memory allocation.
+&lt;/span&gt;        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;string&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;~&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot; is &quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;~&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;writeln&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Understandably this seems like more work for not much gain but bear with me!  This becomes so much more useful the more functions you have.&lt;/p&gt;
+
+&lt;p&gt;Compile it with &lt;code class=&quot;highlighter-rouge&quot;&gt;dmd -shared -defaultlib=libphobos2.so fizz.d -of=libfizz.so&lt;/code&gt; then we want to run &lt;code class=&quot;highlighter-rouge&quot;&gt;dmd -o- fizz.d -version=bindgen 2&amp;gt; fizzbuzz.rb&lt;/code&gt; to automagically generate the correct bindings for our platform!&lt;/p&gt;
+
+&lt;p&gt;If we inspect fizzbuzz.rb we will see that the correct bindings have been generated.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'ffi'&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;FIZZ&lt;/span&gt;
+    &lt;span class=&quot;kp&quot;&gt;extend&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;FFI&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Library&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;ffi_lib&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Dir&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;pwd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/libfizz.so&quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;attach_function&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:rt_init&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:int&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;attach_function&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:rt_term&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:int&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;attach_function&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:fizzBuzz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:void&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;FIZZ&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rt_init&lt;/span&gt;
+
+&lt;span class=&quot;nb&quot;&gt;at_exit&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;no&quot;&gt;FIZZ&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rt_term&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Which we can then import and run.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;c1&quot;&gt;#!/usr/bin/ruby&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'ffi'&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;'./fizzbuzz'&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;FIZZ&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;fizzBuzz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;FIZZ&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;fizzBuzz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;FIZZ&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;fizzBuzz&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Thanks to the rubyffi mixin the D code written is actually platform agnostic.  There is no need to add in the Windows DLL hooks from the &lt;a href=&quot;/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1.html&quot;&gt;previous entry in this series&lt;/a&gt; since the mixin takes care of that for us.&lt;/p&gt;
+
+&lt;p&gt;D mixins work in a similar way to Ruby mixins.  The code generation machinery is seamlessly blended with your own code when the &lt;strong&gt;bindgen&lt;/strong&gt; version is specified to the DMD compiler with &lt;code class=&quot;highlighter-rouge&quot;&gt;-version&lt;/code&gt;.  If bindgen is not specified the code is completely skipped over during the compilation process.  Only mixing in the @Ruby user-defined attribute and DllMain in the case of a Windows build.&lt;/p&gt;
+
+&lt;h3 id=&quot;the-ruby-attribute&quot;&gt;The @Ruby attribute&lt;/h3&gt;
+&lt;p&gt;The @Ruby attribute provides a convenient way for the rubyffi code to introspect into our code at compile time.  We can also use it to specify a ‘friendly’ name for our function so the function can have a different name on the Ruby side to avoid conflicts, this is as simple as writing @Ruby(“newName”).&lt;/p&gt;
+
+&lt;p&gt;The introspection code itself is quite simple&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-d&quot; data-lang=&quot;d&quot;&gt;&lt;span class=&quot;k&quot;&gt;immutable&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fun&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;\tattach_function %s:%s, [%s], :%s\n&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;foreach&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getSymbolsByUDA&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;mixin&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mod&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Ruby&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;functionLinkage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;C&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;res&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;~=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fun&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_fmt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_friend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;__traits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;identifier&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_params&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Parameters&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_rt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ReturnType&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;First it scans through the code for all @Ruby functions within the module supplied.  We only care about the C externed functions so there’s a check for that before we start digging into the parameters and return type.&lt;/p&gt;
+
+&lt;h3 id=&quot;code-generation&quot;&gt;Code generation&lt;/h3&gt;
+&lt;p&gt;The code generation more or less recurses right down to the type level and then builds up from there.  The &lt;code class=&quot;highlighter-rouge&quot;&gt;_rt&lt;/code&gt; function is the bedrock which finally resolves concrete types into their appropriate string representations.  Once the types are resolved we can build the output of the &lt;code class=&quot;highlighter-rouge&quot;&gt;_func&lt;/code&gt; which returns the &lt;code class=&quot;highlighter-rouge&quot;&gt;attach_function&lt;/code&gt; bindings for each @Ruby function with a friendly name if specified.&lt;/p&gt;
+
+&lt;p&gt;This output from &lt;code class=&quot;highlighter-rouge&quot;&gt;_func&lt;/code&gt; is then used to construct the &lt;code class=&quot;highlighter-rouge&quot;&gt;_body&lt;/code&gt; (rt_init, rt_term on Linux) which is in turn used to finish building the platform module definition with &lt;code class=&quot;highlighter-rouge&quot;&gt;_module&lt;/code&gt; which is responsible for library extension and executing rt_init/term.&lt;/p&gt;
+
+&lt;h3 id=&quot;type-conversion&quot;&gt;Type conversion&lt;/h3&gt;
+&lt;p&gt;The problem is that D types don’t map directly into RubyFFI types in some situations.  To handle this there’s a bit of machinery in the &lt;code class=&quot;highlighter-rouge&quot;&gt;_rt()&lt;/code&gt; function&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-d&quot; data-lang=&quot;d&quot;&gt;&lt;span class=&quot;k&quot;&gt;alias&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;U&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Unqual&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cstr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;string&quot;&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;isPointer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;T&lt;/span&gt;   &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;pointer&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;U&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ubyte&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;uint8&quot;&lt;/span&gt;   &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;U&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;byte&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;int8&quot;&lt;/span&gt;    &lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;U&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stringof&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;In this code snippet I use &lt;code class=&quot;highlighter-rouge&quot;&gt;T&lt;/code&gt; when I want to evaluate the entire type including any storage type qualifiers.&lt;/p&gt;
+
+&lt;p&gt;For example &lt;code class=&quot;highlighter-rouge&quot;&gt;cstr&lt;/code&gt; is an alias of &lt;code class=&quot;highlighter-rouge&quot;&gt;const(char*)&lt;/code&gt; and that maps to a RubyFFI string (assuming you’ve null terminated correctly).&lt;/p&gt;
+
+&lt;p&gt;Any pointer type will be mapped to a RubyFFI pointer and you will have to handle the access to that in your code, I will show you examples in the next post in this series.&lt;/p&gt;
+
+&lt;p&gt;Finally - when we really don’t want to retain the qualifiers we use &lt;code class=&quot;highlighter-rouge&quot;&gt;U&lt;/code&gt;, so something like &lt;code class=&quot;highlighter-rouge&quot;&gt;immutable(int)&lt;/code&gt; simply becomes &lt;code class=&quot;highlighter-rouge&quot;&gt;int&lt;/code&gt; in the binding output.&lt;/p&gt;
+
+&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h3&gt;
+&lt;p&gt;There’s still more that can be done with this binding generator to make it better.  I don’t like that you have to pipe stderr out to a file to capture the binding output but there’s not really another way to output during &lt;a href=&quot;https://en.wikipedia.org/wiki/Compile_time_function_execution&quot;&gt;CTFE&lt;/a&gt; yet (at least not that I’m aware of).&lt;/p&gt;
+
+&lt;p&gt;Future improvements could be&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Generating struct layouts&lt;/li&gt;
+  &lt;li&gt;Generating pointer stubs&lt;/li&gt;
+  &lt;li&gt;Speeding up the generation process&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/Sepheus/d-ruby-ffi/blob/master/rubyffi/source/rubyffi.d&quot;&gt;Check out the rubyffi.d source code&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/Sepheus/d-ruby-ffi/tree/master/examples/basic&quot;&gt;Basic example from the repo&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;In the next part of this series we will look at more practical applications of using RubyFFI and D.&lt;/p&gt;
+
+&lt;h3 id=&quot;resources&quot;&gt;Resources&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;https://wiki.dlang.org/Call_D_from_Ruby_using_FFI&quot;&gt;Call D from Ruby using FFI&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/ffi/ffi/wiki&quot;&gt;RubyFFI Binding Guide&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://dlang.org/phobos/std_traits.html&quot;&gt;std.traits&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://dlang.org/spec/traits.html&quot;&gt;__traits&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/sepheus/d-ruby-ffi&quot;&gt;d-ruby-ffi on GitHub&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/Sepheus/d-ruby-ffi/tree/master/examples&quot;&gt;d-ruby-ffi Examples&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;</content><author><name></name></author><summary type="html">Whilst I was experimenting with D and RubyFFI I had wondered if there was an easier way… writing out the bindings was becoming quite cumbersome. So I of course turned to the introspective features of D, not unfamiliar to those well versed in Ruby’s metaprogramming trickery.</summary></entry><entry><title type="html">Ruby and D Interop: Part 1</title><link href="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1.html" rel="alternate" type="text/html" title="Ruby and D Interop: Part 1" /><published>2018-12-02T10:55:34+00:00</published><updated>2018-12-02T10:55:34+00:00</updated><id>https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1</id><content type="html" xml:base="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1.html">&lt;p&gt;I am a big fan of Ruby and I am also a big fan of the less well known &lt;a href=&quot;https://dlang.org/&quot;&gt;D programming language&lt;/a&gt;.  Lately I had been wondering how hard it would be to get them both to work together.  As we will find out - it is not actually all that hard to accomplish!  This is the first entry in a three part series discussing Ruby and D interop.&lt;/p&gt;
 
 &lt;h3 id=&quot;getting-started&quot;&gt;Getting started&lt;/h3&gt;
 &lt;p&gt;If you are following along at home this post assumes:&lt;/p&gt;
@@ -190,7 +332,7 @@ Unfortunately this will not work on Windows out of the box which is something we
 
 &lt;p&gt;Phew!  That was a lot to go through.  Hopefully by this point you have a good idea how to build basic RubyFFI compatible libraries with the D compiler.&lt;/p&gt;
 
-&lt;p&gt;In the next blog post I will be talking about some D code I have written to automatically generate the correct RubyFFI bindings directly from our D code.&lt;/p&gt;
+&lt;p&gt;In the &lt;a href=&quot;/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html&quot;&gt;next part in the series&lt;/a&gt; I will be talking about some D code I have written to automatically generate the correct RubyFFI bindings directly from our D code.&lt;/p&gt;
 
 &lt;h3 id=&quot;resources&quot;&gt;Resources&lt;/h3&gt;
 
@@ -198,4 +340,4 @@ Unfortunately this will not work on Windows out of the box which is something we
   &lt;li&gt;&lt;a href=&quot;https://wiki.dlang.org/Call_D_from_Ruby_using_FFI&quot;&gt;Call D from Ruby using FFI&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://wiki.dlang.org/Win32_DLLs_in_D&quot;&gt;Win32 DLLs in D&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://github.com/ffi/ffi/wiki&quot;&gt;RubyFFI Binding Guide&lt;/a&gt;&lt;/li&gt;
-&lt;/ol&gt;</content><author><name></name></author><summary type="html">I am a big fan of Ruby and I am also a big fan of the less well known D programming language. Lately I had been wondering how hard it would be to get them both to work together. As we will find out - it is not actually all that hard to accomplish!</summary></entry></feed>
+&lt;/ol&gt;</content><author><name></name></author><summary type="html">I am a big fan of Ruby and I am also a big fan of the less well known D programming language. Lately I had been wondering how hard it would be to get them both to work together. As we will find out - it is not actually all that hard to accomplish! This is the first entry in a three part series discussing Ruby and D interop.</summary></entry></feed>
