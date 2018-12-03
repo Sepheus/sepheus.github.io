@@ -6,16 +6,17 @@
 <title>Ruby and D Interop: Part 2 | Emergent Laeca</title>
 <meta name="generator" content="Jekyll v3.8.5" />
 <meta property="og:title" content="Ruby and D Interop: Part 2" />
+<meta name="author" content="Sepheus" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Whilst I was experimenting with D and RubyFFI I had wondered if there was an easier way… writing out the bindings was becoming quite cumbersome. So I of course turned to the introspective features of D, not unfamiliar to those well versed in Ruby’s metaprogramming trickery." />
 <meta property="og:description" content="Whilst I was experimenting with D and RubyFFI I had wondered if there was an easier way… writing out the bindings was becoming quite cumbersome. So I of course turned to the introspective features of D, not unfamiliar to those well versed in Ruby’s metaprogramming trickery." />
-<link rel="canonical" href="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html" />
-<meta property="og:url" content="https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html" />
+<link rel="canonical" href="https://sepheus.github.com/blog/2018/12/02/ruby-d-interop-pt2" />
+<meta property="og:url" content="https://sepheus.github.com/blog/2018/12/02/ruby-d-interop-pt2" />
 <meta property="og:site_name" content="Emergent Laeca" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2018-12-02T15:47:12+00:00" />
 <script type="application/ld+json">
-{"url":"https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html","headline":"Ruby and D Interop: Part 2","dateModified":"2018-12-02T15:47:12+00:00","datePublished":"2018-12-02T15:47:12+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://sepheus.github.com/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html"},"description":"Whilst I was experimenting with D and RubyFFI I had wondered if there was an easier way… writing out the bindings was becoming quite cumbersome. So I of course turned to the introspective features of D, not unfamiliar to those well versed in Ruby’s metaprogramming trickery.","@type":"BlogPosting","@context":"http://schema.org"}</script>
+{"url":"https://sepheus.github.com/blog/2018/12/02/ruby-d-interop-pt2","headline":"Ruby and D Interop: Part 2","dateModified":"2018-12-02T15:47:12+00:00","datePublished":"2018-12-02T15:47:12+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://sepheus.github.com/blog/2018/12/02/ruby-d-interop-pt2"},"author":{"@type":"Person","name":"Sepheus"},"description":"Whilst I was experimenting with D and RubyFFI I had wondered if there was an easier way… writing out the bindings was becoming quite cumbersome. So I of course turned to the introspective features of D, not unfamiliar to those well versed in Ruby’s metaprogramming trickery.","@type":"BlogPosting","@context":"http://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://sepheus.github.com/blog/feed.xml" title="Emergent Laeca" /></head>
 <body><header class="site-header" role="banner">
@@ -30,7 +31,7 @@
           </span>
         </label>
 
-        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+        <div class="trigger"><a class="page-link" href="/blog/2018-12-02-ruby-d-interop-pt3">Ruby and D Interop: Part 3</a><a class="page-link" href="/blog/about/">About</a></div>
       </nav></div>
 </header>
 <main class="page-content" aria-label="Content">
@@ -41,7 +42,7 @@
     <h1 class="post-title p-name" itemprop="name headline">Ruby and D Interop: Part 2</h1>
     <p class="post-meta">
       <time class="dt-published" datetime="2018-12-02T15:47:12+00:00" itemprop="datePublished">Dec 2, 2018
-      </time></p>
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">Sepheus</span></span></p>
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
@@ -51,7 +52,7 @@
 
 <p>In this post I will walk you through my <a href="https://github.com/sepheus/d-ruby-ffi">D Ruby FFI Project</a>.  This project aims to grease the wheels of writing native code in D for use in Ruby by automagically generating bindings for you on demand as well as providing some other useful things.</p>
 
-<p>If you have not read the previous post in this series you can <a href="/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1.html">catch up here</a>.</p>
+<p>If you have not read the previous post in this series you can <a href="/blog/2018/12/02/ruby-d-interop-pt1">catch up here</a>.</p>
 
 <h3 id="using-the-rubyffi-mixin">Using the rubyffi mixin</h3>
 <p>For the sake of simple examples compilation instructions assume you have copied rubyffi.d from the repository to the same location as the file you’re compiling.</p>
@@ -121,7 +122,7 @@
 <span class="no">FIZZ</span><span class="p">.</span><span class="nf">fizzBuzz</span><span class="p">(</span><span class="mi">15</span><span class="p">)</span>
 <span class="no">FIZZ</span><span class="p">.</span><span class="nf">fizzBuzz</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span></code></pre></figure>
 
-<p>Thanks to the rubyffi mixin the D code written is actually platform agnostic.  There is no need to add in the Windows DLL hooks from the <a href="/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1.html">previous entry in this series</a> since the mixin takes care of that for us.</p>
+<p>Thanks to the rubyffi mixin the D code written is actually platform agnostic.  There is no need to add in the Windows DLL hooks from the <a href="/blog/2018/12/02/ruby-d-interop-pt1">previous entry in this series</a> since the mixin takes care of that for us.</p>
 
 <p>D mixins work in a similar way to Ruby mixins.  The code generation machinery is seamlessly blended with your own code when the <strong>bindgen</strong> version is specified to the DMD compiler with <code class="highlighter-rouge">-version</code>.  If bindgen is not specified the code is completely skipped over during the compilation process.  Only mixing in the @Ruby user-defined attribute and DllMain in the case of a Windows build.</p>
 
@@ -140,9 +141,11 @@
 <p>First it scans through the code for all @Ruby functions within the module supplied.  We only care about the C externed functions so there’s a check for that before we start digging into the parameters and return type.</p>
 
 <h3 id="code-generation">Code generation</h3>
-<p>The code generation more or less recurses right down to the type level and then builds up from there.  The <code class="highlighter-rouge">_rt</code> function is the bedrock which finally resolves concrete types into their appropriate string representations.  Once the types are resolved we can build the output of the <code class="highlighter-rouge">_func</code> which returns the <code class="highlighter-rouge">attach_function</code> bindings for each @Ruby function with a friendly name if specified.</p>
+<p>The code generation more or less recurses right down to the type level and then builds up from there.  The <code class="highlighter-rouge">_rt</code> function is the bedrock which finally resolves concrete types into their appropriate string representations.  Once the types are resolved we can build the output of the <code class="highlighter-rouge">_func</code> which returns the <code class="highlighter-rouge">attach_function</code> bindings for each <code class="highlighter-rouge">@Ruby</code> function with a friendly name if specified.</p>
 
-<p>This output from <code class="highlighter-rouge">_func</code> is then used to construct the <code class="highlighter-rouge">_body</code> (rt_init, rt_term on Linux) which is in turn used to finish building the platform module definition with <code class="highlighter-rouge">_module</code> which is responsible for library extension and executing rt_init/term.</p>
+<p>This output from <code class="highlighter-rouge">_func</code> is then used to construct the <code class="highlighter-rouge">_body</code> generating the <code class="highlighter-rouge">rt_init</code> and <code class="highlighter-rouge">rt_term</code> definitions on Linux buiilds.</p>
+
+<p>Finally, the output from <code class="highlighter-rouge">_body</code> is used in <code class="highlighter-rouge">_module</code> where the correct library extensions are determined and calls to <code class="highlighter-rouge">rt_init</code> and <code class="highlighter-rouge">rt_term</code> are produced if necessary.</p>
 
 <h3 id="type-conversion">Type conversion</h3>
 <p>The problem is that D types don’t map directly into RubyFFI types in some situations.  To handle this there’s a bit of machinery in the <code class="highlighter-rouge">_rt()</code> function</p>
@@ -213,11 +216,11 @@
 <div class="PageNavigation">
     <h3>Other Blog Entries</h3>
     
-      <a class="prev" href="/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt1.html">&laquo; Ruby and D Interop: Part 1</a>
+      <a class="prev" href="/blog/2018/12/02/ruby-d-interop-pt1">&laquo; Ruby and D Interop: Part 1</a>
     
     
   </div>
-  </div><a class="u-url" href="/blog/d-ruby-interop/2018/12/02/ruby-d-interop-pt2.html" hidden></a>
+  </div><a class="u-url" href="/blog/2018/12/02/ruby-d-interop-pt2" hidden></a>
 </article>
 
       </div>
@@ -231,7 +234,7 @@
     <div class="footer-col-wrapper">
       <div class="footer-col footer-col-1">
         <ul class="contact-list">
-          <li class="p-name">Emergent Laeca</li><li><a class="u-email" href="mailto:jobs@sepheus.co.uk">jobs@sepheus.co.uk</a></li></ul>
+          <li class="p-name">Sepheus</li><li><a class="u-email" href="mailto:jobs@sepheus.co.uk">jobs@sepheus.co.uk</a></li></ul>
       </div>
 
       <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/sepheus"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">sepheus</span></a></li><li><a href="https://www.twitter.com/sepheus"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">sepheus</span></a></li></ul>
